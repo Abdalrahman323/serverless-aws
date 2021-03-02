@@ -5,11 +5,8 @@ provider:
   name: aws
   runtime: nodejs12.x
   lambdaHashingVersion: 20201221
-
-# you can overwrite defaults here
-#  stage: dev
-#  region: us-east-1
-
+  apiGateway:
+    shouldStartNameWithService: true
 # you can add statements to the Lambda function's IAM Role here
 #  iamRoleStatements:
 #    - Effect: "Allow"
@@ -42,6 +39,18 @@ provider:
 functions:
   hello:
     handler: handler.hello
+    events:
+      - http:
+          method: Get
+          path: /
+          cors: true
+  getOrder:
+    handler: src/lambdas/get-order.handler
+    events:
+      - http:
+          method: Get
+          path: /orders/get-order/{id}
+          cors: true
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events
 #    Check the event documentation for details
