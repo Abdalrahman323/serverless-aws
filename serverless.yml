@@ -5,8 +5,22 @@ provider:
   name: aws
   runtime: nodejs12.x
   lambdaHashingVersion: 20201221
+  stage: 'dev'
   apiGateway:
     shouldStartNameWithService: true
+  environment:
+    orderTableName: ${self:custom.orderTableName}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource:
+        Fn::GetAtt: 
+          - OrdersTable
+          - Arn
 # you can add statements to the Lambda function's IAM Role here
 #  iamRoleStatements:
 #    - Effect: "Allow"
@@ -35,6 +49,8 @@ provider:
 #  exclude:
 #    - exclude-me.js
 #    - exclude-me-dir/**
+custom:
+  orderTableName: orders-table-${self:provider.stage}
 
 functions:
   hello:
@@ -44,6 +60,14 @@ functions:
           method: Get
           path: /
           cors: true
+  createOrder:
+    handler: src/lambdas/create-order.handler
+    events:
+      - http:
+          method: POST
+          path: /orders/create-order
+          cors: true
+
   getOrder:
     handler: src/lambdas/get-order.handler
     events:
@@ -92,6 +116,22 @@ functions:
 #      variable2: value2
 
 # you can add CloudFormation resource templates here
+resources:
+  Resources:
+    OrdersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH   
+            # Hash or Range
+        ProvisionedThroughput:
+          ReadCapacityUnits: 25
+          WriteCapacityUnits: 25
+        TableName: ${self:custom.orderTableName}
 #resources:
 #  Resources:
 #    NewResource:

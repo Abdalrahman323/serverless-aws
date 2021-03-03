@@ -21,7 +21,10 @@ const apiResponse ={
  },
  badRequest(data={},headers={}){
     return this.createResponse(400,data,headers);
- }
+ },
+ serverError(data={},headers={}){
+   return this.createResponse(500,data,headers);
+}
 };
 
 module.exports = apiResponse;
