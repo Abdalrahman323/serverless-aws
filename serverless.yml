@@ -11,6 +11,8 @@ provider:
   environment:
     orderTableName: ${self:custom.orderTableName}
     ordersBucketName: ${self:custom.ordersBucketName}
+    ordersQueue: { Ref: OrdersQueue }
+
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -26,16 +28,27 @@ provider:
     - Effect: Allow
       Action:
         - s3:GetObject
-      Resource: 
+      Resource:
         Fn::Join:
-        - ''
-        - - 'arn:aws:s3:::'
-          - 'Ref': 'OrdersBucket'
-          - '/*'
+          - ""
+          - - "arn:aws:s3:::"
+            - "Ref": "OrdersBucket"
+            - "/*"
+    - Effect: Allow
+      Action:
+        - SQS:SendMessage
+        - SQS:DeleteMessage
+        - SQS:GetQueueUrl
+        - SQS:ReceiveMessage
+      Resource:
+        Fn::GetAtt: 
+          - OrdersQueue
+          - Arn
 
 custom:
   orderTableName: orders-table-${self:provider.stage}
   ordersBucketName: serverless-bucket-orders-${self:provider.stage}
+  ordersQueue: orders-queue-${self:provider.stage}
 
 functions:
   hello:
@@ -67,6 +80,22 @@ functions:
           bucket: ${self:custom.ordersBucketName}
           event: s3:ObjectCreated:*
           existing: true # as i mention it in the resources
+  orderProducer:
+     handler: src/lambdas/order-producer.handler
+     events:
+      - http:
+          method: POST
+          path: /orders/produce-order
+          cors: true
+  orderConsumer:
+     handler: src/lambdas/order-consumer.handler
+     events:
+      - sqs:
+          arn: 
+            Fn::GetAtt:
+              - OrdersQueue
+              - Arn
+
 
 resources:
   Resources:
@@ -88,3 +117,7 @@ resources:
       Type: AWS::S3::Bucket
       Properties:
         BucketName: ${self:custom.ordersBucketName}
+    OrdersQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: ${self:custom.ordersQueue}
